@@ -2,7 +2,6 @@ package traffic
 
 import (
 	"errors"
-	"log"
 	"math"
 	"sync"
 )
@@ -45,8 +44,6 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 
 	span := SpanningTree{}
 
-	log.Println("Finding spanning tree for", start)
-
 	// The map of already visited nodes
 	span.visited = make(map[string]bool)
 
@@ -66,7 +63,6 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 	}
 
 	for len(span.visited) != len(g.nodes) {
-		log.Printf("Visited %d of %d\n", len(span.visited), len(g.nodes))
 
 		// Find the current node to update around
 		var currentName string
@@ -83,8 +79,6 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 		}
 		current := g.nodes[currentName]
 
-		log.Printf("Currently looking at node %v\n", current)
-
 		// Mark this as visited
 		span.visited[currentName] = true
 
@@ -92,7 +86,6 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 		for _, edge := range current.Edges() {
 			// If distance[current] + edge.Weight() < distance[edge.To()]
 			if span.distances[currentName]+edge.Weight() < span.distances[edge.To()] {
-				log.Printf("Updating adjacent node %s\n", edge.To())
 				span.distances[edge.To()] = span.distances[currentName] + edge.Weight()
 				span.tree[edge.To()] = current
 				span.edgeTree[edge.To()] = edge
