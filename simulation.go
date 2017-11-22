@@ -25,10 +25,8 @@ func (S *Simulation) AddEdge(e Edge) {
 }
 
 func (S *Simulation) AddAgent(a Agent) {
-	log.Printf("Agent pointer: %p\n", a)
 	var ma metaAgent
 	ma.agent = a
-	log.Printf("Agent in ma: %p\n", ma.agent)
 	ma.pathLastUpdated = -S.pathTimeout
 	ma.position = S.graph.nodes[a.Start()]
 	ma.timeUntilNextChoice = a.LeaveTime()
@@ -42,9 +40,7 @@ func (S *Simulation) Simulate() {
 }
 
 func (S *Simulation) Tick() {
-	log.Println("=== Refreshing paths ===")
 	S.RefreshPaths()
-	log.Println("=== Moving agents ===")
 	S.MoveAgents()
 	S.currentTime++
 }
@@ -58,7 +54,6 @@ func (S *Simulation) RefreshPaths() {
 			// If timed out, append agent to the corresponding node list
 			agent := agent
 			jobs[agent.position] = append(jobs[agent.position], agent)
-			log.Printf("%p\n", agent)
 		}
 	}
 
@@ -70,23 +65,15 @@ func (S *Simulation) RefreshPaths() {
 	worker := func(jobCh <-chan []*metaAgent) {
 		for agentList := range jobCh {
 			// Perform the shortest spanning tree search
-			log.Println("Searching at", agentList[0].position.Name())
 			S.graph.Dijkstra(agentList[0].position.Name())
 
 			// Set each agent's path
 			for _, agent := range agentList {
 				var err error
-				log.Println("Setting path of agent", agent.agent.Id())
 				agent.path, err = S.graph.Path(agent.position.Name(), agent.agent.Destination())
 				if err != nil {
 					log.Fatal(err)
 				}
-				for _, step := range agent.path {
-					log.Println(step.node, step.edge)
-				}
-				log.Println("Agent path length is", len(agent.path))
-				log.Println("Path is nil:", agent.path == nil)
-				log.Printf("%p\n", agent)
 			}
 		}
 		searchWG.Done()
@@ -112,9 +99,7 @@ func (S *Simulation) MoveAgents() {
 	for _, agent := range S.agents {
 		if !S.finishedAgents[agent.agent.Id()] {
 			agent.timeUntilNextChoice--
-			log.Println("Path is nil:", agent.path == nil)
 			if agent.timeUntilNextChoice <= 0 {
-				log.Println("Moving agent", agent.agent.Id())
 				// Move position and set time
 				agent.position = agent.path[len(agent.path)-1].node
 				agent.timeUntilNextChoice = agent.path[len(agent.path)-1].edge.Time()
@@ -129,7 +114,6 @@ func (S *Simulation) MoveAgents() {
 				agent.path = agent.path[:len(agent.path)-1]
 			}
 			if len(agent.path) == 0 {
-				log.Println("Marking as finished", agent.agent.Id())
 				// Mark it as finished if it reached its destination
 				S.finishedAgents[agent.agent.Id()] = true
 			}
