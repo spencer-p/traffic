@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"math"
+	"sync"
 )
 
 // Graph usage or internal errors
@@ -15,8 +16,9 @@ var (
 )
 
 type Graph struct {
-	nodes map[string]Node
-	trees map[string]SpanningTree
+	nodes     map[string]Node
+	trees     map[string]SpanningTree
+	treeMutex sync.Mutex
 }
 
 type SpanningTree struct {
@@ -98,7 +100,9 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 		}
 	}
 
+	g.treeMutex.Lock()
 	g.trees[start] = span
+	g.treeMutex.Unlock()
 	return span.tree, nil
 }
 
@@ -108,12 +112,14 @@ func (g *Graph) Path(start, destination string) ([]Step, error) {
 		return nil, ErrMissingNode
 	}
 
+	g.treeMutex.Lock()
 	if _, ok := g.trees[start]; !ok {
 		return nil, ErrMissingSearch
 	}
 
 	tree := g.trees[start].tree
 	edgeTree := g.trees[start].edgeTree
+	g.treeMutex.Unlock()
 
 	// Fail if no path
 	if tree[destination] == nil {
