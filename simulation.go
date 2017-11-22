@@ -113,7 +113,7 @@ func (S *Simulation) MoveAgents() {
 
 				// Remember choice
 				agent.history = append(agent.history, Choice{
-					Edge:       agent.path[len(agent.path)-1].edge.To(),
+					To:         agent.path[len(agent.path)-1].edge.To(),
 					Timestamp:  S.currentTime,
 					TravelTime: agent.timeUntilNextChoice})
 

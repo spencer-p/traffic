@@ -1,7 +1,7 @@
 package traffic
 
 type Choice struct {
-	Edge       string
+	To         string
 	Timestamp  int
 	TravelTime int
 }
