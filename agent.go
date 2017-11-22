@@ -11,6 +11,7 @@ type metaAgent struct {
 	agent               Agent
 	path                []Step
 	pathLastUpdated     int
+	lastEdge            Edge
 	timeUntilNextChoice int
 	history             []Choice
 	position            Node

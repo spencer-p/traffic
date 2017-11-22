@@ -104,6 +104,13 @@ func (S *Simulation) MoveAgents() {
 				agent.position = agent.path[len(agent.path)-1].node
 				agent.timeUntilNextChoice = agent.path[len(agent.path)-1].edge.Time()
 
+				// Update agent counts on edges this node is leaving/moving on
+				if agent.lastEdge != nil {
+					agent.lastEdge.RemoveAgent()
+				}
+				agent.lastEdge = agent.path[len(agent.path)-1].edge
+				agent.lastEdge.AddAgent()
+
 				// Remember choice
 				agent.history = append(agent.history, Choice{
 					Edge:       agent.path[len(agent.path)-1].edge.To(),
