@@ -130,13 +130,35 @@ func (S *Simulation) MoveAgents() {
 
 func (S *Simulation) PrintHistory(file io.Writer) {
 	enc := json.NewEncoder(file)
+
+	// Metadata
+	var metadata struct {
+		AgentCount             int
+		MinutesTraveled        int
+		AverageDeltaTravelTime float64
+	}
+	metadata.AgentCount = len(S.agents)
+
+	// Print history of each agent
 	for _, agent := range S.agents {
 		var item struct {
-			Agent   string
-			History []Choice
+			Agent     string
+			History   []Choice
+			StartTime int
+			EndTime   int
+			DeltaTime int
 		}
 		item.Agent = agent.agent.Id()
 		item.History = agent.history
+		item.StartTime = agent.history[0].Timestamp
+		item.EndTime = agent.history[len(agent.history)-1].Timestamp +
+			agent.history[len(agent.history)-1].TravelTime
+		item.DeltaTime = item.EndTime - item.StartTime
+		metadata.MinutesTraveled += item.DeltaTime
 		enc.Encode(item)
 	}
+
+	// Complete metadata and print it
+	metadata.AverageDeltaTravelTime = float64(metadata.MinutesTraveled) / float64(metadata.AgentCount)
+	enc.Encode(metadata)
 }
