@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"reflect"
 	"runtime"
 	"sync"
 )
@@ -114,6 +115,7 @@ func (S *Simulation) MoveAgents() {
 				// Remember choice
 				agent.history = append(agent.history, Choice{
 					To:         agent.path[len(agent.path)-1].edge.To(),
+					EdgeType:   reflect.TypeOf(agent.path[len(agent.path)-1].edge).Elem().Name(),
 					Timestamp:  S.currentTime,
 					TravelTime: agent.timeUntilNextChoice})
 
