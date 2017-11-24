@@ -18,7 +18,12 @@ type Simulation struct {
 }
 
 func NewSimulation() Simulation {
-	return Simulation{graph: NewGraph(), finishedAgents: make(map[string]bool)}
+	// Path timeout is 15 minutes by default
+	// TODO add a setter for this
+	return Simulation{
+		graph:          NewGraph(),
+		finishedAgents: make(map[string]bool),
+		pathTimeout:    15}
 }
 
 func (S *Simulation) AddEdge(e Edge) {
