@@ -33,7 +33,7 @@ func (S *Simulation) AddAgent(a Agent) {
 	var ma metaAgent
 	ma.agent = a
 	ma.pathLastUpdated = -S.pathTimeout
-	ma.position = S.graph.nodes[a.Start()]
+	ma.position = S.graph.nodes[a.Start()] // TODO check Start exists
 	ma.timeUntilNextChoice = a.LeaveTime()
 	S.agents = append(S.agents, &ma)
 }
