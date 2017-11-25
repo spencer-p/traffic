@@ -3,7 +3,6 @@ package traffic
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"reflect"
 	"runtime"
 	"sync"
@@ -39,19 +38,27 @@ func (S *Simulation) AddAgent(a Agent) {
 	S.agents = append(S.agents, &ma)
 }
 
-func (S *Simulation) Simulate() {
+func (S *Simulation) Simulate() error {
 	for len(S.finishedAgents) < len(S.agents) {
-		S.Tick()
+		if err := S.Tick(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (S *Simulation) Tick() {
-	S.RefreshPaths()
+func (S *Simulation) Tick() error {
+	if err := S.RefreshPaths(); err != nil {
+		return err
+	}
 	S.MoveAgents()
 	S.currentTime++
+	return nil
 }
 
-func (S *Simulation) RefreshPaths() {
+func (S *Simulation) RefreshPaths() error {
+	var potentialErrCount int
+
 	// Map of nodes to start at and agents that start there
 	jobs := make(map[Node][]*metaAgent)
 	for _, agent := range S.agents {
@@ -60,25 +67,36 @@ func (S *Simulation) RefreshPaths() {
 			// If timed out, append agent to the corresponding node list
 			agent := agent
 			jobs[agent.position] = append(jobs[agent.position], agent)
+
+			// Each agent is another potential error
+			potentialErrCount++
 		}
 	}
+
+	// Error channel, buffered to job count so it doesn't block
+	errorCh := make(chan error, potentialErrCount)
 
 	// Channel to execute searches and update positions of the agents
 	searchCh := make(chan []*metaAgent)
 	var searchWG sync.WaitGroup
 
 	// Worker function
-	worker := func(jobCh <-chan []*metaAgent) {
+	worker := func(jobCh <-chan []*metaAgent, errorCh chan<- error) {
+	JobsLoop:
 		for agentList := range jobCh {
 			// Perform the shortest spanning tree search
-			S.graph.Dijkstra(agentList[0].position.Name())
+			_, err := S.graph.Dijkstra(agentList[0].position.Name())
+			if err != nil {
+				errorCh <- err
+				break JobsLoop
+			}
 
 			// Set each agent's path
 			for _, agent := range agentList {
-				var err error
 				agent.path, err = S.graph.Path(agent.position.Name(), agent.agent.Destination())
 				if err != nil {
-					log.Fatal(err)
+					errorCh <- err
+					break JobsLoop
 				}
 			}
 		}
@@ -87,7 +105,7 @@ func (S *Simulation) RefreshPaths() {
 
 	// Create worker goroutines
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go worker(searchCh)
+		go worker(searchCh, errorCh)
 		searchWG.Add(1)
 	}
 
@@ -99,6 +117,14 @@ func (S *Simulation) RefreshPaths() {
 	close(searchCh)
 
 	searchWG.Wait()
+
+	// Return an error if there is one, otherwise nil (success)
+	select {
+	case err := <-errorCh:
+		return err
+	default:
+		return nil
+	}
 }
 
 func (S *Simulation) MoveAgents() {
