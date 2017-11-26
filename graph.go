@@ -36,9 +36,9 @@ func NewGraph() *Graph {
 	return &Graph{nodes: make(map[string]Node), trees: make(map[string]SpanningTree)}
 }
 
-func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
-	// First check if the node exists
-	if g.nodes[start] == nil {
+func (g *Graph) Dijkstra(start, destination string, agent Agent) (map[string]Node, error) {
+	// First check if the nodes exist
+	if g.nodes[start] == nil || g.nodes[destination] == nil {
 		return nil, ErrMissingNode
 	}
 
@@ -62,7 +62,7 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 		}
 	}
 
-	for len(span.visited) != len(g.nodes) {
+	for len(span.visited) != len(g.nodes) && !span.visited[destination] {
 
 		// Find the current node to update around
 		var currentName string
@@ -85,8 +85,8 @@ func (g *Graph) Dijkstra(start string) (map[string]Node, error) {
 		// Update all the connected nodes
 		for _, edge := range current.Edges() {
 			// If distance[current] + edge.Weight() < distance[edge.To()]
-			if span.distances[currentName]+edge.Weight() < span.distances[edge.To()] {
-				span.distances[edge.To()] = span.distances[currentName] + edge.Weight()
+			if span.distances[currentName]+edge.Weight(agent) < span.distances[edge.To()] {
+				span.distances[edge.To()] = span.distances[currentName] + edge.Weight(agent)
 				span.tree[edge.To()] = current
 				span.edgeTree[edge.To()] = edge
 			}

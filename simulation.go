@@ -56,40 +56,27 @@ func (S *Simulation) Tick() error {
 }
 
 func (S *Simulation) RefreshPaths() error {
-	// Map of nodes to start at and agents that start there
-	jobs := make(map[Node][]*metaAgent)
-	for _, agent := range S.agents {
-		if !S.finishedAgents[agent.agent.Id()] &&
-			S.currentTime-agent.pathLastUpdated >= S.pathTimeout {
-			// If timed out, append agent to the corresponding node list
-			agent := agent
-			jobs[agent.position] = append(jobs[agent.position], agent)
-		}
-	}
-
 	// Error/Done channel - for marking workers as errored or done
 	errorDoneCh := make(chan error)
 
 	// Channel to execute searches and update positions of the agents
-	searchCh := make(chan []*metaAgent)
+	searchCh := make(chan *metaAgent)
 
 	// Worker function
-	worker := func(jobCh <-chan []*metaAgent, errorCh chan<- error) {
-		for agentList := range jobCh {
+	worker := func(jobCh <-chan *metaAgent, errorCh chan<- error) {
+		for agent := range jobCh {
 			// Perform the shortest spanning tree search
-			_, err := S.graph.Dijkstra(agentList[0].position.Name())
+			_, err := S.graph.Dijkstra(agent.position.Name(), agent.agent.Destination(), agent.agent)
 			if err != nil {
 				errorCh <- err
 				return
 			}
 
-			// Set each agent's path
-			for _, agent := range agentList {
-				agent.path, err = S.graph.Path(agent.position.Name(), agent.agent.Destination())
-				if err != nil {
-					errorCh <- err
-					return
-				}
+			// Set the agent's path
+			agent.path, err = S.graph.Path(agent.position.Name(), agent.agent.Destination())
+			if err != nil {
+				errorCh <- err
+				return
 			}
 		}
 
@@ -106,9 +93,12 @@ func (S *Simulation) RefreshPaths() error {
 
 	// Send jobs to the workers
 	go func() {
-		for _, agentList := range jobs {
-			agentList := agentList // Create new reference for goroutine worker
-			searchCh <- agentList
+		for _, agent := range S.agents {
+			if !S.finishedAgents[agent.agent.Id()] &&
+				S.currentTime-agent.pathLastUpdated >= S.pathTimeout {
+				agent := agent // New ref for channel
+				searchCh <- agent
+			}
 		}
 		close(searchCh)
 	}()

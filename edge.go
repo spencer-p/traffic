@@ -1,7 +1,7 @@
 package traffic
 
 type Edge interface {
-	Weight() float64
+	Weight(Agent) float64
 	To() string
 	From() string
 	AddAgent()
