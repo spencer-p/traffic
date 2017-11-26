@@ -5,7 +5,6 @@ import (
 	"io"
 	"reflect"
 	"runtime"
-	"sync"
 )
 
 type Simulation struct {
@@ -57,8 +56,6 @@ func (S *Simulation) Tick() error {
 }
 
 func (S *Simulation) RefreshPaths() error {
-	var potentialErrCount int
-
 	// Map of nodes to start at and agents that start there
 	jobs := make(map[Node][]*metaAgent)
 	for _, agent := range S.agents {
@@ -67,28 +64,23 @@ func (S *Simulation) RefreshPaths() error {
 			// If timed out, append agent to the corresponding node list
 			agent := agent
 			jobs[agent.position] = append(jobs[agent.position], agent)
-
-			// Each agent is another potential error
-			potentialErrCount++
 		}
 	}
 
-	// Error channel, buffered to job count so it doesn't block
-	errorCh := make(chan error, potentialErrCount)
+	// Error/Done channel - for marking workers as errored or done
+	errorDoneCh := make(chan error)
 
 	// Channel to execute searches and update positions of the agents
 	searchCh := make(chan []*metaAgent)
-	var searchWG sync.WaitGroup
 
 	// Worker function
 	worker := func(jobCh <-chan []*metaAgent, errorCh chan<- error) {
-	JobsLoop:
 		for agentList := range jobCh {
 			// Perform the shortest spanning tree search
 			_, err := S.graph.Dijkstra(agentList[0].position.Name())
 			if err != nil {
 				errorCh <- err
-				break JobsLoop
+				return
 			}
 
 			// Set each agent's path
@@ -96,35 +88,43 @@ func (S *Simulation) RefreshPaths() error {
 				agent.path, err = S.graph.Path(agent.position.Name(), agent.agent.Destination())
 				if err != nil {
 					errorCh <- err
-					break JobsLoop
+					return
 				}
 			}
 		}
-		searchWG.Done()
+
+		// Done
+		errorCh <- nil
 	}
 
 	// Create worker goroutines
+	var workerCount int
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go worker(searchCh, errorCh)
-		searchWG.Add(1)
+		go worker(searchCh, errorDoneCh)
+		workerCount++
 	}
 
 	// Send jobs to the workers
-	for _, agentList := range jobs {
-		agentList := agentList // Create new reference for goroutine worker
-		searchCh <- agentList
-	}
-	close(searchCh)
+	go func() {
+		for _, agentList := range jobs {
+			agentList := agentList // Create new reference for goroutine worker
+			searchCh <- agentList
+		}
+		close(searchCh)
+	}()
 
-	searchWG.Wait()
-
-	// Return an error if there is one, otherwise nil (success)
-	select {
-	case err := <-errorCh:
-		return err
-	default:
-		return nil
+	// Wait for all jobs to finish, or break with error early
+	for err := range errorDoneCh {
+		workerCount--
+		if err != nil {
+			return err
+		} else if workerCount == 0 {
+			break
+		}
 	}
+
+	// Success
+	return nil
 }
 
 func (S *Simulation) MoveAgents() {
