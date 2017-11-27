@@ -6,3 +6,13 @@ type Choice struct {
 	Timestamp  int
 	TravelTime int
 }
+
+type AverageData struct {
+	AgentCount             int
+	MinutesTraveled        int
+	AverageDeltaTravelTime float64
+}
+
+func (ad *AverageData) UpdateAverage() {
+	ad.AverageDeltaTravelTime = float64(ad.MinutesTraveled) / float64(ad.AgentCount)
+}

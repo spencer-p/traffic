@@ -155,11 +155,8 @@ func (S *Simulation) PrintHistory(file io.Writer) {
 	enc := json.NewEncoder(file)
 
 	// Metadata
-	var metadata struct {
-		AgentCount             int
-		MinutesTraveled        int
-		AverageDeltaTravelTime float64
-	}
+	var metadata AverageData
+	metadataByEdgeType := make(map[string]*AverageData)
 	metadata.AgentCount = len(S.agents)
 
 	// Print history of each agent
@@ -177,11 +174,29 @@ func (S *Simulation) PrintHistory(file io.Writer) {
 		item.EndTime = agent.history[len(agent.history)-1].Timestamp +
 			agent.history[len(agent.history)-1].TravelTime
 		item.DeltaTime = item.EndTime - item.StartTime
-		metadata.MinutesTraveled += item.DeltaTime
 		enc.Encode(item)
+
+		// Update metadata
+		metadata.MinutesTraveled += item.DeltaTime
+		for _, choice := range item.History {
+			// Get the avg data, create if doesn't exist
+			md, ok := metadataByEdgeType[choice.EdgeType]
+			if !ok {
+				md = &AverageData{}
+				metadataByEdgeType[choice.EdgeType] = md
+			}
+
+			// Update it
+			metadataByEdgeType[choice.EdgeType].AgentCount++
+			metadataByEdgeType[choice.EdgeType].MinutesTraveled += choice.TravelTime
+		}
 	}
 
 	// Complete metadata and print it
-	metadata.AverageDeltaTravelTime = float64(metadata.MinutesTraveled) / float64(metadata.AgentCount)
+	metadata.UpdateAverage()
+	for _, md := range metadataByEdgeType {
+		md.UpdateAverage()
+	}
+	enc.Encode(metadataByEdgeType)
 	enc.Encode(metadata)
 }
