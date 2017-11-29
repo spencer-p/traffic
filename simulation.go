@@ -176,8 +176,11 @@ func (S *Simulation) PrintHistory(file io.Writer) {
 		item.DeltaTime = item.EndTime - item.StartTime
 		enc.Encode(item)
 
-		// Update metadata
+		// Update total metadata
 		metadata.MinutesTraveled += item.DeltaTime
+
+		// Update breakdown metadata
+		agentRecorded := make(map[string]bool)
 		for _, choice := range item.History {
 			// Get the avg data, create if doesn't exist
 			md, ok := metadataByEdgeType[choice.EdgeType]
@@ -187,7 +190,11 @@ func (S *Simulation) PrintHistory(file io.Writer) {
 			}
 
 			// Update it
-			metadataByEdgeType[choice.EdgeType].AgentCount++
+			if !agentRecorded[choice.EdgeType] {
+				metadataByEdgeType[choice.EdgeType].AgentCount++
+				agentRecorded[choice.EdgeType] = true
+			}
+			metadataByEdgeType[choice.EdgeType].AgentCountPerEdge++
 			metadataByEdgeType[choice.EdgeType].MinutesTraveled += choice.TravelTime
 		}
 	}

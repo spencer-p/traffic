@@ -9,6 +9,7 @@ type Choice struct {
 
 type AverageData struct {
 	AgentCount             int
+	AgentCountPerEdge      int
 	MinutesTraveled        int
 	AverageDeltaTravelTime float64
 }
