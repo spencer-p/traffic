@@ -2,6 +2,7 @@ package traffic
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"reflect"
 	"runtime"
@@ -10,6 +11,7 @@ import (
 type Simulation struct {
 	graph          *Graph
 	agents         []*metaAgent
+	agentsByGroup  map[string][]*metaAgent
 	currentTime    int
 	pathTimeout    int
 	finishedAgents map[string]bool
@@ -21,7 +23,9 @@ func NewSimulation() Simulation {
 	return Simulation{
 		graph:          NewGraph(),
 		finishedAgents: make(map[string]bool),
-		pathTimeout:    15}
+		pathTimeout:    15,
+		agentsByGroup:  make(map[string][]*metaAgent),
+	}
 }
 
 func (S *Simulation) AddEdge(e Edge) {
@@ -35,6 +39,7 @@ func (S *Simulation) AddAgent(a Agent) {
 	ma.position = S.graph.nodes[a.Start()] // TODO check Start exists
 	ma.timeUntilNextChoice = a.LeaveTime()
 	S.agents = append(S.agents, &ma)
+	S.agentsByGroup[a.Group()] = append(S.agentsByGroup[a.Group()], &ma)
 }
 
 func (S *Simulation) Simulate() error {
@@ -151,16 +156,20 @@ func (S *Simulation) MoveAgents() {
 	}
 }
 
-func (S *Simulation) PrintHistory(file io.Writer) {
+func (S *Simulation) PrintGroupHistory(file io.Writer, group string) {
+	fmt.Fprintf(file, "======\nGroup: %s\n======\n", group)
+	// First get group
+	agents := S.agentsByGroup[group]
+
 	enc := json.NewEncoder(file)
 
 	// Metadata
 	var metadata AverageData
 	metadataByEdgeType := make(map[string]*AverageData)
-	metadata.AgentCount = len(S.agents)
+	metadata.AgentCount = len(agents)
 
 	// Print history of each agent
-	for _, agent := range S.agents {
+	for _, agent := range agents {
 		var item struct {
 			Agent     string
 			History   []Choice
@@ -206,4 +215,10 @@ func (S *Simulation) PrintHistory(file io.Writer) {
 	}
 	enc.Encode(metadataByEdgeType)
 	enc.Encode(metadata)
+}
+
+func (S *Simulation) PrintHistory(file io.Writer) {
+	for group, _ := range S.agentsByGroup {
+		S.PrintGroupHistory(file, group)
+	}
 }

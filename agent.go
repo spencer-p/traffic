@@ -2,6 +2,7 @@ package traffic
 
 type Agent interface {
 	Id() string
+	Group() string
 	Start() string
 	Destination() string
 	LeaveTime() int
