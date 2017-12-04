@@ -3,7 +3,6 @@ package traffic
 import (
 	"errors"
 	"math"
-	"sync"
 )
 
 // Graph usage or internal errors
@@ -15,34 +14,20 @@ var (
 )
 
 type Graph struct {
-	nodes     map[string]Node
-	trees     map[string]SpanningTree
-	treeMutex sync.Mutex
-}
-
-type SpanningTree struct {
-	visited   map[string]bool
-	tree      map[string]Node
-	distances map[string]float64
-	edgeTree  map[string]Edge
-}
-
-type Step struct {
-	node Node
-	edge Edge
+	nodes map[string]Node
 }
 
 func NewGraph() *Graph {
-	return &Graph{nodes: make(map[string]Node), trees: make(map[string]SpanningTree)}
+	return &Graph{nodes: make(map[string]Node)}
 }
 
-func (g *Graph) Dijkstra(start, destination string, agent Agent) (map[string]Node, error) {
+func (g *Graph) Dijkstra(start, destination string, agent Agent) (*SpanningTree, error) {
 	// First check if the nodes exist
 	if g.nodes[start] == nil || g.nodes[destination] == nil {
 		return nil, ErrMissingNode
 	}
 
-	span := SpanningTree{}
+	span := SpanningTree{start: g.nodes[start], destination: g.nodes[destination]}
 
 	// The map of already visited nodes
 	span.visited = make(map[string]bool)
@@ -93,41 +78,7 @@ func (g *Graph) Dijkstra(start, destination string, agent Agent) (map[string]Nod
 		}
 	}
 
-	g.treeMutex.Lock()
-	g.trees[start] = span
-	g.treeMutex.Unlock()
-	return span.tree, nil
-}
-
-func (g *Graph) Path(start, destination string) ([]Step, error) {
-	// Check nodes are in the graph
-	if g.nodes[start] == nil || g.nodes[destination] == nil {
-		return nil, ErrMissingNode
-	}
-
-	g.treeMutex.Lock()
-	if _, ok := g.trees[start]; !ok {
-		return nil, ErrMissingSearch
-	}
-
-	tree := g.trees[start].tree
-	edgeTree := g.trees[start].edgeTree
-	g.treeMutex.Unlock()
-
-	// Fail if no path
-	if tree[destination] == nil {
-		return nil, ErrDisconnected
-	}
-
-	// Write out the path
-	path := make([]Step, 1)
-	path[0] = Step{node: g.nodes[destination], edge: edgeTree[g.nodes[destination].Name()]}
-	for walk := tree[destination]; walk != g.nodes[start]; walk = tree[walk.Name()] {
-		//log.Println("Walking at", walk.Name())
-		path = append(path, Step{node: walk, edge: edgeTree[walk.Name()]})
-	}
-
-	return path, nil
+	return &span, nil
 }
 
 func (g *Graph) AddNode(toadd Node) error {

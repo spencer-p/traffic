@@ -71,14 +71,14 @@ func (S *Simulation) RefreshPaths() error {
 	worker := func(jobCh <-chan *metaAgent, errorCh chan<- error) {
 		for agent := range jobCh {
 			// Perform the shortest spanning tree search
-			_, err := S.graph.Dijkstra(agent.position.Name(), agent.agent.Destination(), agent.agent)
+			tree, err := S.graph.Dijkstra(agent.position.Name(), agent.agent.Destination(), agent.agent)
 			if err != nil {
 				errorCh <- err
 				return
 			}
 
 			// Set the agent's path
-			agent.path, err = S.graph.Path(agent.position.Name(), agent.agent.Destination())
+			agent.path, err = tree.Path()
 			if err != nil {
 				errorCh <- err
 				return
