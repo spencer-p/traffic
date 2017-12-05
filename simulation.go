@@ -218,7 +218,7 @@ func (S *Simulation) PrintGroupHistory(file io.Writer, group string) {
 }
 
 func (S *Simulation) PrintHistory(file io.Writer) {
-	for group, _ := range S.agentsByGroup {
+	for group := range S.agentsByGroup {
 		S.PrintGroupHistory(file, group)
 	}
 }
