@@ -13,15 +13,15 @@ var (
 	ErrMissingSearch = errors.New("traffic: no path yet found, haven't searched")
 )
 
-type Graph struct {
+type graph struct {
 	nodes map[string]Node
 }
 
-func NewGraph() *Graph {
-	return &Graph{nodes: make(map[string]Node)}
+func NewGraph() *graph {
+	return &graph{nodes: make(map[string]Node)}
 }
 
-func (g *Graph) Dijkstra(start, destination string, agent Agent) (*SpanningTree, error) {
+func (g *graph) Dijkstra(start, destination string, agent Agent) (*SpanningTree, error) {
 	// First check if the nodes exist
 	if g.nodes[start] == nil || g.nodes[destination] == nil {
 		return nil, ErrMissingNode
@@ -81,15 +81,7 @@ func (g *Graph) Dijkstra(start, destination string, agent Agent) (*SpanningTree,
 	return &span, nil
 }
 
-func (g *Graph) AddNode(toadd Node) error {
-	if existing := g.nodes[toadd.Name()]; existing != nil && existing != toadd {
-		return ErrExistingNode
-	}
-	g.nodes[toadd.Name()] = toadd
-	return nil
-}
-
-func (g *Graph) AddEdge(toadd Edge) {
+func (g *graph) AddEdge(toadd Edge) {
 	//log.Printf("Adding edge %v\n", toadd)
 
 	// Add the edge to the From() node

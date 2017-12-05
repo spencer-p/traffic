@@ -20,7 +20,7 @@ import (
 // comprised of a set of Agents and a set of Edges. The Simulation manages all
 // this data and manipulates it in the main event loop, Simulate.
 type Simulation struct {
-	graph          *Graph
+	graph          *graph
 	agents         []*metaAgent
 	agentsByGroup  map[string][]*metaAgent
 	currentTime    int
