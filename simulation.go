@@ -1,3 +1,11 @@
+/*
+Package traffic implements an abstract simulation of traffic. A simulation is
+comprised of a collection of Edges and Agents. A graph is constructed from the
+Edges, which the Agents travel on over time. The traffic library separates
+complex path finding and meticulous agent management from the actual edge and
+agent implementations. This, and the interfaces for Agent and Edge, allow great
+creative freedom and quick development times for any simple traffic simulation.
+*/
 package traffic
 
 import (
@@ -8,6 +16,9 @@ import (
 	"runtime"
 )
 
+// Simulation is the entry point for the traffic library. A Simulation is
+// comprised of a set of Agents and a set of Edges. The Simulation manages all
+// this data and manipulates it in the main event loop, Simulate.
 type Simulation struct {
 	graph          *Graph
 	agents         []*metaAgent
@@ -17,6 +28,8 @@ type Simulation struct {
 	finishedAgents map[string]bool
 }
 
+// NewSimulation returns a new empty Simulation with a path timeout of 15
+// minutes.
 func NewSimulation() Simulation {
 	// Path timeout is 15 minutes by default
 	// TODO add a setter for this
@@ -28,10 +41,12 @@ func NewSimulation() Simulation {
 	}
 }
 
+// AddEdge adds and processes the provided Edge to the Simulation.
 func (S *Simulation) AddEdge(e Edge) {
 	S.graph.AddEdge(e)
 }
 
+// AddAgent adds and processes the provided Agent to the Simulation.
 func (S *Simulation) AddAgent(a Agent) {
 	var ma metaAgent
 	ma.agent = a
@@ -42,6 +57,9 @@ func (S *Simulation) AddAgent(a Agent) {
 	S.agentsByGroup[a.Group()] = append(S.agentsByGroup[a.Group()], &ma)
 }
 
+// Simulate is the main event loop for the Simulation. It moves agents along
+// optimal paths, updating those paths along the way, until all the agents have
+// reached their destination.
 func (S *Simulation) Simulate() error {
 	for len(S.finishedAgents) < len(S.agents) {
 		if err := S.Tick(); err != nil {
@@ -51,6 +69,8 @@ func (S *Simulation) Simulate() error {
 	return nil
 }
 
+// Tick processes a single minute of simulation time. It refreshes necessary
+// paths and then moves agents. For basic usage, use Simulate.
 func (S *Simulation) Tick() error {
 	if err := S.RefreshPaths(); err != nil {
 		return err
@@ -60,6 +80,9 @@ func (S *Simulation) Tick() error {
 	return nil
 }
 
+// RefreshPaths updates the paths of any agent that needs their paths updated.
+// To save time, it runs Dijkstra's algorithm on the provided edges concurrently
+// on every core. For basic usage, see Simulate.
 func (S *Simulation) RefreshPaths() error {
 	// Error/Done channel - for marking workers as errored or done
 	errorDoneCh := make(chan error)
@@ -122,6 +145,9 @@ func (S *Simulation) RefreshPaths() error {
 	return nil
 }
 
+// MoveAgents moves agents to their next edge if they have completed their last
+// edge travel. It additionally saves metadata for output on the way. For basic
+// usage, see Simulate.
 func (S *Simulation) MoveAgents() {
 	for _, agent := range S.agents {
 		if !S.finishedAgents[agent.agent.Id()] {
@@ -156,6 +182,9 @@ func (S *Simulation) MoveAgents() {
 	}
 }
 
+// PrintGroupHistory encodes the full history of group to an io.Writer. It is
+// formatted as Choice history, then AverageData for each edge type, and then
+// a total cumulative AverageData.
 func (S *Simulation) PrintGroupHistory(file io.Writer, group string) {
 	fmt.Fprintf(file, "======\nGroup: %s\n======\n", group)
 	// First get group
@@ -217,6 +246,7 @@ func (S *Simulation) PrintGroupHistory(file io.Writer, group string) {
 	enc.Encode(metadata)
 }
 
+// PrintHistory calls PrintGroupHistory on every group in the Simulation.
 func (S *Simulation) PrintHistory(file io.Writer) {
 	for group := range S.agentsByGroup {
 		S.PrintGroupHistory(file, group)

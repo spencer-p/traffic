@@ -6,6 +6,7 @@ type Node interface {
 	AddEdge(e Edge)
 }
 
+// A node has a name and contains an adjacency list of edges.
 type node struct {
 	name  string
 	edges []Edge

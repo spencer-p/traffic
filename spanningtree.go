@@ -1,5 +1,6 @@
 package traffic
 
+// SpanningTree encodes a result of Dijkstra's Algorithm and operations on it.
 type SpanningTree struct {
 	visited            map[string]bool
 	tree               map[string]Node
@@ -8,11 +9,13 @@ type SpanningTree struct {
 	start, destination Node
 }
 
+// Step is a node and the edge used to get to said node.
 type Step struct {
 	node Node
 	edge Edge
 }
 
+// Path constructs a Step array from the shortest path found with Dijkstra's.
 func (st *SpanningTree) Path() ([]Step, error) {
 	// Check nodes are in the spanning tree
 	if st.visited[st.start.Name()] == false || st.visited[st.destination.Name()] == false {
