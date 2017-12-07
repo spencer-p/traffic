@@ -47,33 +47,31 @@ func (g *graph) Dijkstra(start, destination string, agent Agent) (*SpanningTree,
 		}
 	}
 
-	for len(span.visited) != len(g.nodes) && !span.visited[destination] {
+	// And a priority queue for the next node to visit
+	priorityQueue := newMinQueue(len(g.nodes))
+	for i := range g.nodes {
+		priorityQueue.push(g.nodes[i])
+	}
+	priorityQueue.update(g.nodes[start], 0)
+
+	for priorityQueue.Len() > 0 && !span.visited[destination] {
 
 		// Find the current node to update around
-		var currentName string
-		if len(span.visited) == 0 {
-			currentName = start
-		} else {
-			min := math.Inf(0)
-			for name, d := range span.distances {
-				if span.visited[name] == false && d <= min {
-					currentName = name
-					min = d
-				}
-			}
-		}
-		current := g.nodes[currentName]
+		current := priorityQueue.pop()
 
 		// Mark this as visited
-		span.visited[currentName] = true
+		span.visited[current.Name()] = true
 
 		// Update all the connected nodes
 		for _, edge := range current.Edges() {
 			// If distance[current] + edge.Weight() < distance[edge.To()]
-			if span.distances[currentName]+edge.Weight(agent) < span.distances[edge.To()] {
-				span.distances[edge.To()] = span.distances[currentName] + edge.Weight(agent)
+			if span.distances[current.Name()]+edge.Weight(agent) < span.distances[edge.To()] {
+				span.distances[edge.To()] = span.distances[current.Name()] + edge.Weight(agent)
 				span.tree[edge.To()] = current
 				span.edgeTree[edge.To()] = edge
+
+				// Update in priority queue
+				priorityQueue.update(g.nodes[edge.To()], span.distances[edge.To()])
 			}
 		}
 	}
